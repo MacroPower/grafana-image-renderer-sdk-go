@@ -2,23 +2,44 @@ package sequencer
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"time"
 )
 
+// RenderFunc is used to define render behavior. You should define the
+// call that should be made to the renderer. In its sumplest form, it
+// should simply call client.Render with the time parameters passed.
 type RenderFunc func(time.Time, time.Time) ([]byte, int, error)
 
+// SaveFunc can be used to handle render results. The caller will pass
+// the rendered results as []byte, and include an int that identifies
+// the render in the sequence.
+type SaveFunc func([]byte, int) error
+
+// Sequencer defines and manages a render sequence.
 type Sequencer interface {
 	Sequence(int, int)
 }
 
 type FrameSequencer struct {
-	Renderer          RenderFunc
-	Start             time.Time
-	Interval, Padding time.Duration
-	MaxConcurrency    int
-	OutDirectory      string
+	// See RenderFunc for more information.
+	Renderer RenderFunc
+
+	// The start time of the frame sequence. If using a positive
+	// interval, this should be the start of the range to capture. If
+	// using a negative interval, it is the end of the range.
+	Start time.Time
+
+	// Interval is the time progression between frames.
+	Interval time.Duration
+
+	// Padding can be added or subtracted from the frame.
+	StartPadding, EndPadding time.Duration
+
+	// Maximum number of concurrent render requests.
+	MaxConcurrency int
+
+	// See SaveFunc for more information.
+	SaveCallback SaveFunc
 }
 
 type frame struct {
@@ -35,13 +56,28 @@ func (s *FrameSequencer) Sequence(start, end int) {
 	in := make(chan frame, numFrames)
 	out := make(chan error, numFrames)
 
-	for i := 0; i < s.MaxConcurrency; i++ {
+	maxConcurrency := s.MaxConcurrency
+	if maxConcurrency > numFrames {
+		maxConcurrency = numFrames
+	}
+	for i := 0; i < maxConcurrency; i++ {
 		go s.renderWorker(in, out)
 	}
 
 	for i := start; i <= end; i++ {
 		frameStart := s.Start.Add(s.Interval * time.Duration(i-1))
-		frameEnd := frameStart.Add(s.Interval - s.Padding)
+		frameEnd := frameStart.Add(s.Interval)
+
+		if frameStart.After(frameEnd) {
+			// This allows users to inverse the frame order
+			// by passing a negative interval.
+			oldFrameEnd := frameEnd
+			frameEnd = frameStart
+			frameStart = oldFrameEnd
+		}
+
+		frameStart = frameStart.Add(s.StartPadding)
+		frameEnd = frameEnd.Add(s.EndPadding)
 
 		in <- frame{i, frameStart, frameEnd}
 	}
@@ -68,7 +104,6 @@ func (s *FrameSequencer) renderWorker(in <-chan frame, out chan<- error) {
 
 		fmt.Printf("Frame %d rendered in %f seconds\n", f.num, time.Since(startTime).Seconds())
 
-		filename := filepath.Join(s.OutDirectory, fmt.Sprintf("%06d.png", f.num))
-		out <- ioutil.WriteFile(filename, b, 0644)
+		out <- s.SaveCallback(b, f.num)
 	}
 }
