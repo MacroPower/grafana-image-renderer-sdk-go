@@ -11,6 +11,8 @@ It also includes:
 
 This package contains code & general language from [grafana-tools/sdk](https://github.com/grafana-tools/sdk).
 
+<a href="#"><img src="docs/img/banner.gif"></a>
+
 ## CLI
 
 The CLI contains two subcommands, `image` for single renders, and `sequence` for consecutive renders.
