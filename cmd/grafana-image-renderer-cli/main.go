@@ -85,7 +85,7 @@ func main() {
 		)
 		sequenceCommand.Parse(os.Args[2:])
 	default:
-		flag.PrintDefaults()
+		fmt.Println("image or sequence subcommand is required")
 		os.Exit(1)
 	}
 
