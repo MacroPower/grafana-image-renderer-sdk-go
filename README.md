@@ -15,10 +15,16 @@ This package contains code & general language from [grafana-tools/sdk](https://g
 
 ## CLI
 
+Install with:
+
+```text
+go get -u github.com/MacroPower/grafana-image-renderer-sdk-go/cmd/grafana-image-renderer-cli
+```
+
 The CLI contains two subcommands, `image` for single renders, and `sequence` for consecutive renders.
 
 ```text
-grafana-image-renderer-cli image --help
+$ grafana-image-renderer-cli image --help
 
 Usage of image:
   -api-key-or-basic-auth string
@@ -44,7 +50,7 @@ Usage of image:
 ```
 
 ```text
-grafana-image-renderer-cli sequence --help
+$ grafana-image-renderer-cli sequence --help
 
 Usage of sequence:
   -api-key-or-basic-auth string
