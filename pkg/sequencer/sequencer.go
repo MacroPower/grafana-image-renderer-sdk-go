@@ -86,7 +86,7 @@ func (s *FrameSequencer) Sequence(start, end int) {
 	for i := 1; i <= numFrames; i++ {
 		err := <-out
 		if err != nil {
-			fmt.Print(err)
+			fmt.Println(err)
 		}
 	}
 }
