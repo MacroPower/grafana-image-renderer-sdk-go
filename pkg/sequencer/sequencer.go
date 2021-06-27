@@ -61,7 +61,7 @@ func (s *FrameSequencer) Sequence(start, end int) {
 		maxConcurrency = numFrames
 	}
 	for i := 0; i < maxConcurrency; i++ {
-		go s.renderWorker(in, out)
+		go s.renderWorker(i, in, out)
 	}
 
 	for i := start; i <= end; i++ {
@@ -97,8 +97,8 @@ func (s *FrameSequencer) renderWorker(in <-chan frame, out chan<- error) {
 		fmt.Printf("Rendering frame %d\n", f.num)
 
 		b, code, err := s.Renderer(f.start, f.end)
-		if err != nil {
-			out <- fmt.Errorf("%d error: %v", code, err)
+		if err != nil || code != 200 {
+			out <- fmt.Errorf("worker %d error: code %d: %v", n, code, err)
 			continue
 		}
 
