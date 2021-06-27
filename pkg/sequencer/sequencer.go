@@ -6,7 +6,7 @@ import (
 )
 
 // RenderFunc is used to define render behavior. You should define the
-// call that should be made to the renderer. In its sumplest form, it
+// call that should be made to the renderer. In its simplest form, it
 // should simply call client.Render with the time parameters passed.
 type RenderFunc func(time.Time, time.Time) ([]byte, int, error)
 
@@ -34,6 +34,9 @@ type FrameSequencer struct {
 
 	// Padding can be added or subtracted from the frame.
 	StartPadding, EndPadding time.Duration
+
+	// Delay before starting each new worker.
+	WorkerDelay time.Duration
 
 	// Maximum number of concurrent render requests.
 	MaxConcurrency int
@@ -91,7 +94,8 @@ func (s *FrameSequencer) Sequence(start, end int) {
 	}
 }
 
-func (s *FrameSequencer) renderWorker(in <-chan frame, out chan<- error) {
+func (s *FrameSequencer) renderWorker(n int, in <-chan frame, out chan<- error) {
+	time.Sleep(s.WorkerDelay * time.Duration(n))
 	for f := range in {
 		startTime := time.Now()
 		fmt.Printf("Rendering frame %d\n", f.num)

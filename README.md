@@ -83,4 +83,6 @@ Usage of sequence:
         Timeout of the render request (default 1m0s)
   -width int
         The width of the image (default 1920)
+  -worker-delay duration
+        Delay worker startup (default 2s)
 ```

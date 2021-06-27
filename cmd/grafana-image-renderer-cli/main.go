@@ -57,6 +57,7 @@ func main() {
 		startPadding    = sequenceCommand.Duration("start-padding", 0, "Duration to add to the start of the frame")
 		endPadding      = sequenceCommand.Duration("end-padding", 0, "Duration to add to the end of the frame")
 		maxConcurrency  = sequenceCommand.Int("max-concurrency", 5, "Maximum number of concurrent render requests")
+		workerDelay     = sequenceCommand.Duration("worker-delay", 2*time.Second, "Delay worker startup")
 		outDirectory    = sequenceCommand.String("out-directory", "frames", "Directory to write rendered frames to")
 
 		imageCommand = flag.NewFlagSet("image", flag.ExitOnError)
@@ -160,6 +161,7 @@ func main() {
 			Interval:       *frameInterval,
 			StartPadding:   *startPadding,
 			EndPadding:     *endPadding,
+			WorkerDelay:    *workerDelay,
 			MaxConcurrency: *maxConcurrency,
 			SaveCallback: func(b []byte, n int) error {
 				filename := filepath.Join(*outDirectory, fmt.Sprintf("%06d.png", n))
