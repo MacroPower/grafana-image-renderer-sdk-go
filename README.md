@@ -59,12 +59,12 @@ Usage of sequence:
         Grafana API URL
   -dashboard string
         ID of the dashboard
-  -end-frame int
-        The last frame to render (default 2)
   -end-padding duration
         Duration to add to the end of the frame
   -frame-interval duration
         Time progression between frames, positive = forward, negative = backward (default 5m0s)
+  -frames string
+        The frames to render, pass a range and/or a set (e.g. 1-10,12,15) (default "1-2")
   -height int
         The height of the image (default 1080)
   -max-concurrency int
@@ -73,8 +73,6 @@ Usage of sequence:
         Directory to write rendered frames to (default "frames")
   -panel int
         ID of the panel, 0 = Entire dashboard
-  -start-frame int
-        The first frame to render (default 1)
   -start-padding duration
         Duration to add to the start of the frame
   -start-time int

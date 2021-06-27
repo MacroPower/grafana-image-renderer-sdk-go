@@ -1,6 +1,7 @@
 package sequencer
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -17,7 +18,7 @@ type SaveFunc func([]byte, int) error
 
 // Sequencer defines and manages a render sequence.
 type Sequencer interface {
-	Sequence(int, int)
+	Sequence(...int)
 }
 
 type FrameSequencer struct {
@@ -50,12 +51,43 @@ type frame struct {
 	start, end time.Time
 }
 
-func (s *FrameSequencer) Sequence(start, end int) {
-	if start < 1 || start > end {
-		panic("malformed sequence")
+func getFrame(n int, s *FrameSequencer) frame {
+	frameStart := s.Start.Add(s.Interval * time.Duration(n-1))
+	frameEnd := frameStart.Add(s.Interval)
+
+	if frameStart.After(frameEnd) {
+		// This allows users to inverse the frame order
+		// by passing a negative interval.
+		oldFrameEnd := frameEnd
+		frameEnd = frameStart
+		frameStart = oldFrameEnd
 	}
 
-	numFrames := 1 + end - start
+	frameStart = frameStart.Add(s.StartPadding)
+	frameEnd = frameEnd.Add(s.EndPadding)
+
+	return frame{
+		num:   n,
+		start: frameStart,
+		end:   frameEnd,
+	}
+}
+
+func GetSequence(start, end int) ([]int, error) {
+	if start < 1 || start > end {
+		return nil, errors.New("malformed sequence")
+	}
+
+	var seq []int
+	for i := start; i <= end; i++ {
+		seq = append(seq, i)
+	}
+
+	return seq, nil
+}
+
+func (s *FrameSequencer) Sequence(frames ...int) {
+	numFrames := len(frames)
 	in := make(chan frame, numFrames)
 	out := make(chan error, numFrames)
 
@@ -67,22 +99,8 @@ func (s *FrameSequencer) Sequence(start, end int) {
 		go s.renderWorker(i, in, out)
 	}
 
-	for i := start; i <= end; i++ {
-		frameStart := s.Start.Add(s.Interval * time.Duration(i-1))
-		frameEnd := frameStart.Add(s.Interval)
-
-		if frameStart.After(frameEnd) {
-			// This allows users to inverse the frame order
-			// by passing a negative interval.
-			oldFrameEnd := frameEnd
-			frameEnd = frameStart
-			frameStart = oldFrameEnd
-		}
-
-		frameStart = frameStart.Add(s.StartPadding)
-		frameEnd = frameEnd.Add(s.EndPadding)
-
-		in <- frame{i, frameStart, frameEnd}
+	for _, i := range frames {
+		in <- getFrame(i, s)
 	}
 	close(in)
 

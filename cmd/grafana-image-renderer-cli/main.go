@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/MacroPower/grafana-image-renderer-sdk-go/pkg/client"
@@ -51,8 +53,7 @@ func main() {
 		startTimeMs       int64
 
 		sequenceCommand = flag.NewFlagSet("sequence", flag.ExitOnError)
-		startFrame      = sequenceCommand.Int("start-frame", 1, "The first frame to render")
-		endFrame        = sequenceCommand.Int("end-frame", 2, "The last frame to render")
+		frames          = sequenceCommand.String("frames", "1-2", "The frames to render, pass a range and/or a set (e.g. 1-10,12,15)")
 		frameInterval   = sequenceCommand.Duration("frame-interval", 5*time.Minute, "Time progression between frames, positive = forward, negative = backward")
 		startPadding    = sequenceCommand.Duration("start-padding", 0, "Duration to add to the start of the frame")
 		endPadding      = sequenceCommand.Duration("end-padding", 0, "Duration to add to the end of the frame")
@@ -114,12 +115,8 @@ func main() {
 			fmt.Println("max-concurrency must be at least 1")
 			argErr = true
 		}
-		if *startFrame < 1 {
-			fmt.Println("start-frame must be 1 or higher")
-			argErr = true
-		}
-		if *startFrame > *endFrame {
-			fmt.Println("end-frame must be after start-frame")
+		if *frames == "" {
+			fmt.Println("frames is required")
 			argErr = true
 		}
 	}
@@ -155,6 +152,38 @@ func main() {
 	}
 
 	if sequenceCommand.Parsed() {
+		var framesToRender []int
+		for _, framesGroup := range strings.Split(*frames, ",") {
+			if !strings.Contains(framesGroup, "-") {
+				f, err := strconv.Atoi(framesGroup)
+				if err != nil {
+					panic(err)
+				}
+				framesToRender = append(framesToRender, f)
+
+				continue
+			}
+
+			r := strings.Split(framesGroup, "-")
+
+			r1, err := strconv.Atoi(r[0])
+			if err != nil {
+				panic(err)
+			}
+
+			r2, err := strconv.Atoi(r[1])
+			if err != nil {
+				panic(err)
+			}
+
+			f, err := sequencer.GetSequence(r1, r2)
+			if err != nil {
+				panic(err)
+			}
+
+			framesToRender = append(framesToRender, f...)
+		}
+
 		seq := sequencer.FrameSequencer{
 			Renderer:       rf,
 			Start:          startTime,
@@ -168,7 +197,7 @@ func main() {
 				return ioutil.WriteFile(filename, b, 0644)
 			},
 		}
-		seq.Sequence(*startFrame, *endFrame)
+		seq.Sequence(framesToRender...)
 	}
 
 	fmt.Printf("Completed all work in %f seconds", time.Since(started).Seconds())
